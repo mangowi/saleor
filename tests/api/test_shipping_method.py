@@ -5,7 +5,6 @@ import pytest
 from django.shortcuts import reverse
 from tests.utils import get_graphql_content
 from saleor.graphql.shipping.types import ShippingMethodTypeEnum
-from saleor.shipping import ShippingMethodType
 
 
 @pytest.fixture
@@ -74,12 +73,8 @@ def test_shipping_zone_query(user_api_client, shipping_zone):
         shippingZone(id: $id) {
             name
             shippingMethods {
-                edges {
-                    node {
-                        price {
-                            amount
-                        }
-                    }
+                price {
+                    amount
                 }
             }
             priceRange {
@@ -93,18 +88,17 @@ def test_shipping_zone_query(user_api_client, shipping_zone):
         }
     }
     """
-
     ID = graphene.Node.to_global_id('ShippingZone', shipping.id)
     variables = json.dumps({'id': ID})
     response = user_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
+    assert 'errors' not in content
 
     shipping_data = content['data']['shippingZone']
-    assert 'errors' not in content
     assert shipping_data['name'] == shipping.name
-    no_ppc = shipping_zone.shipping_methods.count()
-    assert len(shipping_data['shippingMethods']) == no_ppc
+    num_of_shipping_methods = shipping_zone.shipping_methods.count()
+    assert len(shipping_data['shippingMethods']) == num_of_shipping_methods
     price_range = shipping.price_range
     data_price_range = shipping_data['priceRange']
     assert data_price_range['start']['amount'] == price_range.start.amount
@@ -128,48 +122,129 @@ def test_shipping_zones_query(user_api_client, shipping_zone):
     assert content['data']['shippingZones']['totalCount'] == num_of_shippings
 
 
-def test_create_shipping_zone(admin_api_client):
-    query = """
-        mutation createShipping{
-            shippingZoneCreate(
-                input: {name: "test shipping", countries: ["PL"]}) {
-                    shippingZone {
-                        name
-                        countries
-                    }
+CREATE_SHIPPING_ZONE_QUERY = """
+    mutation createShipping(
+        $name: String, $default: Boolean, $countries: [String]) {
+        shippingZoneCreate(
+            input: {name: $name, countries: $countries, default: $default})
+        {
+            errors {
+                field
+                message
+            }
+            shippingZone {
+                name
+                countries {
+                    code
                 }
-        }
-    """
-    response = admin_api_client.post(reverse('api'), {'query': query})
-    content = get_graphql_content(response)
-    assert 'errors' not in content
-    data = content['data']['shippingZoneCreate']['shippingZone']
-    assert data['name'] == 'test shipping'
-    assert data['countries'] == ['PL']
-
-
-def test_update_shipping_zone(admin_api_client, shipping_zone):
-    query = """
-        mutation updateShipping($id: ID!, $name: String) {
-            shippingZoneUpdate(id: $id, input: {name: $name}) {
-                shippingZone {
-                    name
-                }
+                default
             }
         }
-    """
-    name = 'Parabolic name'
-    shipping_id = graphene.Node.to_global_id(
-        'ShippingZone', shipping_zone.pk)
-    assert shipping_zone.name != name
+    }
+"""
+
+
+def test_create_shipping_zone(admin_api_client):
+    query = CREATE_SHIPPING_ZONE_QUERY
     variables = json.dumps(
-        {'id': shipping_id, 'name': name})
+        {'name': 'test shipping', 'countries': ['PL']})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
-    assert 'errors' not in content
+    data = content['data']['shippingZoneCreate']
+    assert not data['errors']
+    zone = data['shippingZone']
+    assert zone['name'] == 'test shipping'
+    assert zone['countries'] == [{'code': 'PL'}]
+    assert zone['default'] == False
+
+
+def test_create_default_shipping_zone(admin_api_client):
+    query = CREATE_SHIPPING_ZONE_QUERY
+    variables = json.dumps(
+        {'default': True, 'name': 'test shipping', 'countries': ['PL']})
+    response = admin_api_client.post(
+        reverse('api'), {'query': query, 'variables': variables})
+    content = get_graphql_content(response)
+    data = content['data']['shippingZoneCreate']
+    assert not data['errors']
+    zone = data['shippingZone']
+    assert zone['name'] == 'test shipping'
+    assert zone['countries'] == []
+    assert zone['default'] == True
+
+
+def test_create_duplicated_default_shipping_zone(
+        admin_api_client, shipping_zone):
+    shipping_zone.default = True
+    shipping_zone.save()
+
+    query = CREATE_SHIPPING_ZONE_QUERY
+    variables = json.dumps(
+        {'default': True, 'name': 'test shipping', 'countries': ['PL']})
+    response = admin_api_client.post(
+        reverse('api'), {'query': query, 'variables': variables})
+    content = get_graphql_content(response)
+    data = content['data']['shippingZoneCreate']
+    assert data['errors']
+    assert data['errors'][0]['field'] == 'default'
+    assert data['errors'][0]['message'] == (
+        'Default shipping zone already exists.')
+
+
+UPDATE_SHIPPING_ZONE_QUERY = """
+    mutation updateShipping(
+            $id: ID!, $name: String, $default: Boolean, $countries: [String]) {
+        shippingZoneUpdate(
+            id: $id,
+            input: {name: $name, default: $default, countries: $countries})
+        {
+            shippingZone {
+                name
+            }
+            errors {
+                field
+                message
+            }
+        }
+    }
+"""
+
+
+def test_update_shipping_zone(admin_api_client, shipping_zone):
+    query = UPDATE_SHIPPING_ZONE_QUERY
+    name = 'Parabolic name'
+    shipping_id = graphene.Node.to_global_id('ShippingZone', shipping_zone.pk)
+    variables = json.dumps({'id': shipping_id, 'name': name, 'countries': []})
+    response = admin_api_client.post(
+        reverse('api'), {'query': query, 'variables': variables})
+    content = get_graphql_content(response)
+    data = content['data']['shippingZoneUpdate']
+    assert not data['errors']
     data = content['data']['shippingZoneUpdate']['shippingZone']
     assert data['name'] == name
+
+
+def test_update_shipping_zone_default_exists(
+        admin_api_client, shipping_zone):
+    query = UPDATE_SHIPPING_ZONE_QUERY
+    default_zone = shipping_zone
+    default_zone.default = True
+    default_zone.pk = None
+    default_zone.save()
+    shipping_zone = shipping_zone.__class__.objects.filter(default=False).get()
+
+    shipping_id = graphene.Node.to_global_id('ShippingZone', shipping_zone.pk)
+    variables = json.dumps(
+        {'id': shipping_id, 'name': 'Name', 'countries': [], 'default': True})
+    response = admin_api_client.post(
+        reverse('api'), {'query': query, 'variables': variables})
+    content = get_graphql_content(response)
+    data = content['data']['shippingZoneUpdate']
+    assert data['errors']
+    assert data['errors'][0]['field'] == 'default'
+    assert data['errors'][0]['message'] == (
+        'Default shipping zone already exists.')
 
 
 def test_delete_shipping_zone(admin_api_client, shipping_zone):
@@ -211,7 +286,7 @@ def test_create_shipping_method(
     variables = json.dumps({
         'shippingZone': shipping_zone_id, 'name': name, 'price': price,
         'minimumOrderPrice': min_price, 'maximumOrderPrice': max_price,
-        'type': ShippingMethodTypeEnum.PRICE_BASED.name})
+        'type': ShippingMethodTypeEnum.PRICE.name})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
@@ -222,7 +297,7 @@ def test_create_shipping_method(
     assert data['price']['amount'] == float(price)
     assert data['minimumOrderPrice'] == expected_min_price
     assert data['maximumOrderPrice'] == expected_max_price
-    assert data['type'] == ShippingMethodType.PRICE_BASED.upper()
+    assert data['type'] == ShippingMethodTypeEnum.PRICE.name
 
 
 @pytest.mark.parametrize(
@@ -240,7 +315,7 @@ def test_create_weight_based_shipping_method(
     variables = json.dumps({
         'shippingZone': shipping_zone_id, 'name': 'DHL', 'price': 12.34,
         'minimumOrderWeight': min_weight, 'maximumOrderWeight': max_weight,
-        'type': ShippingMethodTypeEnum.WEIGHT_BASED.name})
+        'type': ShippingMethodTypeEnum.WEIGHT.name})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
@@ -270,7 +345,7 @@ def test_create_weight_shipping_method_errors(
     variables = json.dumps({
         'shippingZone': shipping_zone_id, 'name': 'DHL', 'price': 12.34,
         'minimumOrderWeight': min_weight, 'maximumOrderWeight': max_weight,
-        'type': ShippingMethodTypeEnum.WEIGHT_BASED.name})
+        'type': ShippingMethodTypeEnum.WEIGHT.name})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
@@ -299,7 +374,7 @@ def test_create_price_shipping_method_errors(
     variables = json.dumps({
         'shippingZone': shipping_zone_id, 'name': 'DHL', 'price': 12.34,
         'minimumOrderPrice': min_price, 'maximumOrderPrice': max_price,
-        'type': ShippingMethodTypeEnum.PRICE_BASED.name})
+        'type': ShippingMethodTypeEnum.PRICE.name})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)
@@ -346,7 +421,7 @@ def test_update_shipping_method(admin_api_client, shipping_zone):
             'price': price,
             'id': shipping_method_id,
             'minimumOrderPrice': 12.00,
-            'type': ShippingMethodTypeEnum.PRICE_BASED.name})
+            'type': ShippingMethodTypeEnum.PRICE.name})
     response = admin_api_client.post(
         reverse('api'), {'query': query, 'variables': variables})
     content = get_graphql_content(response)

@@ -33,8 +33,8 @@ from saleor.page.models import Page
 from saleor.payment.models import PaymentMethod
 from saleor.payment import TransactionType, PaymentMethodChargeStatus
 from saleor.product.models import (
-    AttributeChoiceValue, Category, Collection, Product, ProductAttribute,
-    ProductAttributeTranslation, ProductImage, ProductTranslation, ProductType,
+    AttributeValue, Category, Collection, Product, Attribute,
+    AttributeTranslation, ProductImage, ProductTranslation, ProductType,
     ProductVariant)
 from saleor.shipping.models import (
     ShippingMethod, ShippingMethodType, ShippingZone)
@@ -256,28 +256,28 @@ def shipping_method(shipping_zone):
 
 @pytest.fixture
 def color_attribute(db):  # pylint: disable=W0613
-    attribute = ProductAttribute.objects.create(
+    attribute = Attribute.objects.create(
         slug='color', name='Color')
-    AttributeChoiceValue.objects.create(
+    AttributeValue.objects.create(
         attribute=attribute, name='Red', slug='red')
-    AttributeChoiceValue.objects.create(
+    AttributeValue.objects.create(
         attribute=attribute, name='Blue', slug='blue')
     return attribute
 
 
 @pytest.fixture
-def pink_choice_value(color_attribute):  # pylint: disable=W0613
-    value = AttributeChoiceValue.objects.create(
+def pink_attribute_value(color_attribute):  # pylint: disable=W0613
+    value = AttributeValue.objects.create(
         slug='pink', name='Pink', attribute=color_attribute, value='#FF69B4')
     return value
 
 
 @pytest.fixture
 def size_attribute(db):  # pylint: disable=W0613
-    attribute = ProductAttribute.objects.create(slug='size', name='Size')
-    AttributeChoiceValue.objects.create(
+    attribute = Attribute.objects.create(slug='size', name='Size')
+    AttributeValue.objects.create(
         attribute=attribute, name='Small', slug='small')
-    AttributeChoiceValue.objects.create(
+    AttributeValue.objects.create(
         attribute=attribute, name='Big', slug='big')
     return attribute
 
@@ -465,7 +465,7 @@ def order_with_lines(
     method = shipping_zone.shipping_methods.get()
     order.shipping_method_name = method.name
     order.shipping_method = method
-    order.shipping_price = method.get_total_price(taxes)
+    order.shipping_price = method.get_total(taxes)
     order.save()
 
     recalculate_order(order)
@@ -770,16 +770,16 @@ def vatlayer(db, settings, tax_rates, taxes):
 @pytest.fixture
 def translated_variant_fr(product):
     attribute = product.product_type.variant_attributes.first()
-    return ProductAttributeTranslation.objects.create(
-        language_code='fr', product_attribute=attribute,
+    return AttributeTranslation.objects.create(
+        language_code='fr', attribute=attribute,
         name='Name tranlsated to french')
 
 
 @pytest.fixture
-def translated_product_attribute(product):
+def translated_attribute(product):
     attribute = product.product_type.product_attributes.first()
-    return ProductAttributeTranslation.objects.create(
-        language_code='fr', product_attribute=attribute,
+    return AttributeTranslation.objects.create(
+        language_code='fr', attribute=attribute,
         name='Name tranlsated to french')
 
 

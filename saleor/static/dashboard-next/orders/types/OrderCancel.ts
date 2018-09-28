@@ -1,11 +1,17 @@
 /* tslint:disable */
 // This file was automatically generated and should not be edited.
 
-import { AddressCountry, OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
+import { OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: OrderCancel
 // ====================================================
+
+export interface OrderCancel_orderCancel_order_billingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
 
 export interface OrderCancel_orderCancel_order_billingAddress {
   __typename: "Address";
@@ -13,7 +19,7 @@ export interface OrderCancel_orderCancel_order_billingAddress {
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderCancel_orderCancel_order_billingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -98,6 +104,7 @@ export interface OrderCancel_orderCancel_order_lines_edges_node {
   quantity: number;
   quantityFulfilled: number;
   unitPrice: OrderCancel_orderCancel_order_lines_edges_node_unitPrice | null;
+  thumbnailUrl: string | null;
 }
 
 export interface OrderCancel_orderCancel_order_lines_edges {
@@ -110,13 +117,19 @@ export interface OrderCancel_orderCancel_order_lines {
   edges: OrderCancel_orderCancel_order_lines_edges[];
 }
 
+export interface OrderCancel_orderCancel_order_shippingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
+
 export interface OrderCancel_orderCancel_order_shippingAddress {
   __typename: "Address";
   id: string;
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderCancel_orderCancel_order_shippingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -189,6 +202,12 @@ export interface OrderCancel_orderCancel_order_user {
   email: string;
 }
 
+export interface OrderCancel_orderCancel_order_availableShippingMethods {
+  __typename: "ShippingMethod";
+  id: string;
+  name: string;
+}
+
 export interface OrderCancel_orderCancel_order {
   __typename: "Order";
   id: string;
@@ -209,6 +228,7 @@ export interface OrderCancel_orderCancel_order {
   totalAuthorized: OrderCancel_orderCancel_order_totalAuthorized | null;
   totalCaptured: OrderCancel_orderCancel_order_totalCaptured | null;
   user: OrderCancel_orderCancel_order_user | null;
+  availableShippingMethods: (OrderCancel_orderCancel_order_availableShippingMethods | null)[] | null;
 }
 
 export interface OrderCancel_orderCancel {
@@ -222,4 +242,5 @@ export interface OrderCancel {
 
 export interface OrderCancelVariables {
   id: string;
+  restock: boolean;
 }

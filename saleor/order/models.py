@@ -3,7 +3,8 @@ from operator import attrgetter
 from uuid import uuid4
 
 from django.conf import settings
-from django.core.validators import MaxValueValidator, MinValueValidator
+from django.contrib.postgres.fields import JSONField
+from django.core.validators import MinValueValidator
 from django.db import models
 from django.db.models import F, Max, Sum
 from django.urls import reverse
@@ -11,7 +12,6 @@ from django.utils.timezone import now
 from django.utils.translation import pgettext_lazy
 from django_measurement.models import MeasurementField
 from django_prices.models import MoneyField, TaxedMoneyField
-from jsonfield import JSONField
 from measurement.measures import Weight
 from payments import PaymentStatus, PurchasedItem
 from payments.models import BasePayment
@@ -115,8 +115,8 @@ class Order(models.Model):
     def is_fully_paid(self):
         # FIXME Adapt to new API
         total_paid = sum([
-            payment.get_total_price() for payment in self.payments.filter(
-                status=PaymentStatus.CONFIRMED)],
+            payment.get_total() for payment in
+            self.payments.filter(status=PaymentStatus.CONFIRMED)],
                          ZERO_TAXED_MONEY)
         return total_paid.gross >= self.total.gross
 
@@ -186,6 +186,13 @@ class Order(models.Model):
     def can_cancel(self):
         return self.status not in {OrderStatus.CANCELED, OrderStatus.DRAFT}
 
+    def get_total_weight(self):
+        # Cannot use `sum` as it parses an empty Weight to an int
+        weights = Weight(kg=0)
+        for line in self:
+            weights += line.variant.get_weight() * line.quantity
+        return weights
+
 
 class OrderLine(models.Model):
     order = models.ForeignKey(
@@ -195,13 +202,13 @@ class OrderLine(models.Model):
         blank=True, null=True)
     # max_length is as produced by ProductVariant's display_product method
     product_name = models.CharField(max_length=386)
-    translated_product_name = models.CharField(max_length=386, default='')
+    translated_product_name = models.CharField(
+        max_length=386, default='', blank=True)
     product_sku = models.CharField(max_length=32)
     is_shipping_required = models.BooleanField()
-    quantity = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(999)])
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
     quantity_fulfilled = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(999)], default=0)
+        validators=[MinValueValidator(0)], default=0)
     unit_price_net = MoneyField(
         currency=settings.DEFAULT_CURRENCY, max_digits=12,
         decimal_places=settings.DEFAULT_DECIMAL_PLACES)
@@ -268,8 +275,7 @@ class FulfillmentLine(models.Model):
         OrderLine, related_name='+', on_delete=models.CASCADE)
     fulfillment = models.ForeignKey(
         Fulfillment, related_name='lines', on_delete=models.CASCADE)
-    quantity = models.IntegerField(
-        validators=[MinValueValidator(0), MaxValueValidator(999)])
+    quantity = models.IntegerField(validators=[MinValueValidator(1)])
 
 
 class Payment(BasePayment):
@@ -308,7 +314,7 @@ class Payment(BasePayment):
                     currency=self.order.discount_amount.currency))
         return lines
 
-    def get_total_price(self):
+    def get_total(self):
         return TaxedMoney(
             net=Money(self.total - self.tax, self.currency),
             gross=Money(self.total, self.currency))
@@ -331,8 +337,7 @@ class OrderEvent(models.Model):
     order = models.ForeignKey(
         Order, related_name='events', on_delete=models.CASCADE)
     parameters = JSONField(
-        blank=True, default={},
-        dump_kwargs={'cls': CustomJsonEncoder, 'separators': (',', ':')})
+        blank=True, default=dict, encoder=CustomJsonEncoder)
     user = models.ForeignKey(
         settings.AUTH_USER_MODEL, blank=True, null=True,
         on_delete=models.SET_NULL, related_name='+')

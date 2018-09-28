@@ -7,6 +7,7 @@ from ...product.templatetags.product_images import get_thumbnail
 from ..account.types import User
 from ..core.types.common import CountableDjangoObjectType
 from ..core.types.money import Money, TaxedMoney
+from ..shipping.types import ShippingMethod
 
 OrderEventsEnum = graphene.Enum.from_enum(OrderEvents)
 OrderEventsEmailsEnum = graphene.Enum.from_enum(OrderEventsEmails)
@@ -31,6 +32,8 @@ class OrderEvent(CountableDjangoObjectType):
     quantity = graphene.Int(description='Number of items.')
     composed_id = graphene.String(
         description='Composed id of the Fulfillment.')
+    oversold_items = graphene.List(
+        graphene.String, description='List of oversold lines names.')
 
     class Meta:
         description = 'History log of the order.'
@@ -57,6 +60,9 @@ class OrderEvent(CountableDjangoObjectType):
 
     def resolve_composed_id(self, info):
         return self.parameters.get('composed_id', None)
+
+    def resolve_oversold_items(self, info):
+        return self.parameters.get('oversold_items', None)
 
 
 class Fulfillment(CountableDjangoObjectType):
@@ -105,6 +111,9 @@ class Order(CountableDjangoObjectType):
         description='List of events associated with the order.')
     user_email = graphene.String(
         required=False, description='Email address of the customer.')
+    available_shipping_methods = graphene.List(
+        ShippingMethod, required=False,
+        description='Shipping methods that can be used with this order.')
 
     class Meta:
         description = 'Represents an order in the shop.'
@@ -122,7 +131,7 @@ class Order(CountableDjangoObjectType):
     def resolve_total_authorized(obj, info):
         payment = obj.get_last_payment()
         if payment:
-            return payment.get_total_price().gross
+            return payment.get_total().gross
 
     @staticmethod
     def resolve_total_captured(obj, info):
@@ -165,6 +174,11 @@ class Order(CountableDjangoObjectType):
         if obj.user_id:
             return obj.user.email
         return None
+
+    @staticmethod
+    def resolve_available_shipping_methods(obj, info):
+        from .resolvers import resolve_shipping_methods
+        return resolve_shipping_methods(obj, info)
 
 
 class OrderLine(CountableDjangoObjectType):

@@ -4,11 +4,12 @@ from graphene_django.filter import DjangoFilterConnectionField
 from graphql_jwt.decorators import login_required, permission_required
 
 from .account.mutations import (
-    CustomerCreate, CustomerUpdate, PasswordReset, SetPassword, StaffCreate,
-    StaffUpdate, AddressCreate, AddressUpdate, AddressDelete)
+    CustomerCreate, CustomerUpdate, CustomerPasswordReset, CustomerRegister,
+    PasswordReset, SetPassword, StaffCreate, StaffDelete, StaffUpdate,
+    AddressCreate, AddressUpdate, AddressDelete)
 from .account.types import AddressValidationData, AddressValidationInput, User
 from .account.resolvers import (
-    resolve_address_validator, resolve_customers, resolve_staff_users) 
+    resolve_address_validator, resolve_customers, resolve_staff_users)
 from .menu.resolvers import resolve_menu, resolve_menus, resolve_menu_items
 from .menu.types import Menu, MenuItem
 # FIXME: sorting import by putting below line at the beginning breaks app
@@ -26,12 +27,14 @@ from .order.filters import OrderFilter
 from .order.resolvers import resolve_order, resolve_orders
 from .order.types import Order
 from .order.mutations.draft_orders import (
-    DraftOrderComplete, DraftOrderCreate, DraftOrderDelete, DraftOrderUpdate)
+    DraftOrderComplete, DraftOrderCreate, DraftOrderDelete,
+    DraftOrderLineCreate, DraftOrderLineDelete, DraftOrderLineUpdate,
+    DraftOrderUpdate)
 from .order.mutations.fulfillments import (
-    FulfillmentCancel, FulfillmentCreate, FulfillmentUpdate)
+    FulfillmentCancel, FulfillmentCreate, FulfillmentUpdateTracking)
 from .order.mutations.orders import (
     OrderAddNote, OrderCancel, OrderCapture, OrderMarkAsPaid, OrderRefund,
-    OrderRelease, OrderUpdate)
+    OrderRelease, OrderUpdate, OrderUpdateShipping)
 from .page.resolvers import resolve_pages, resolve_page
 from .page.types import Page
 from .page.mutations import PageCreate, PageDelete, PageUpdate
@@ -42,9 +45,9 @@ from .payment.mutations import (
     PaymentMethodVoid)
 from .product.filters import ProductFilterSet
 from .product.mutations.attributes import (
-    AttributeChoiceValueCreate, AttributeChoiceValueDelete,
-    AttributeChoiceValueUpdate, ProductAttributeCreate, ProductAttributeDelete,
-    ProductAttributeUpdate)
+    AttributeValueCreate, AttributeValueDelete,
+    AttributeValueUpdate, AttributeCreate, AttributeDelete,
+    AttributeUpdate)
 from .product.mutations.products import (
     CategoryCreate, CategoryDelete, CategoryUpdate,
     CollectionAddProducts, CollectionCreate, CollectionDelete,
@@ -58,7 +61,7 @@ from .product.resolvers import (
     resolve_attributes, resolve_categories, resolve_collections,
     resolve_products, resolve_product_types, resolve_product_variants)
 from .product.types import (
-    Category, Collection, Product, ProductAttribute, ProductType,
+    Category, Collection, Product, Attribute, ProductType,
     ProductVariant)
 from .shipping.resolvers import resolve_shipping_zones
 from .shipping.types import ShippingZone
@@ -83,10 +86,10 @@ class Query(graphene.ObjectType):
         AddressValidationData,
         input=graphene.Argument(AddressValidationInput, required=True))
     attributes = DjangoFilterConnectionField(
-        ProductAttribute,
+        Attribute,
         query=graphene.String(description=DESCRIPTIONS['attributes']),
         in_category=graphene.Argument(graphene.ID),
-        description='List of the shop\'s product attributes.')
+        description='List of the shop\'s attributes.')
     categories = DjangoFilterConnectionField(
         Category, query=graphene.String(
             description=DESCRIPTIONS['category']),
@@ -109,8 +112,8 @@ class Query(graphene.ObjectType):
         Checkout, description='List of checkouts')
     checkout_lines = DjangoFilterConnectionField(
         CheckoutLine, description='List of checkout lines')
-    checkout_line = graphene.Field(CheckoutLine, id=graphene.Argument(graphene.ID))
-
+    checkout_line = graphene.Field(
+        CheckoutLine, id=graphene.Argument(graphene.ID))
     menu = graphene.Field(
         Menu, id=graphene.Argument(graphene.ID),
         name=graphene.Argument(graphene.String, description="Menu name."),
@@ -322,9 +325,9 @@ class Mutations(graphene.ObjectType):
     set_password = SetPassword.Field()
     password_reset = PasswordReset.Field()
 
-    attribute_choice_value_create = AttributeChoiceValueCreate.Field()
-    attribute_choice_value_delete = AttributeChoiceValueDelete.Field()
-    attribute_choice_value_update = AttributeChoiceValueUpdate.Field()
+    attribute_value_create = AttributeValueCreate.Field()
+    attribute_value_delete = AttributeValueDelete.Field()
+    attribute_value_update = AttributeValueUpdate.Field()
 
     category_create = CategoryCreate.Field()
     category_delete = CategoryDelete.Field()
@@ -332,9 +335,12 @@ class Mutations(graphene.ObjectType):
 
     customer_create = CustomerCreate.Field()
     customer_update = CustomerUpdate.Field()
+    customer_password_reset = CustomerPasswordReset.Field()
+    customer_register = CustomerRegister.Field()
 
     staff_create = StaffCreate.Field()
     staff_update = StaffUpdate.Field()
+    staff_delete = StaffDelete.Field()
 
     address_create = AddressCreate.Field()
     address_update = AddressUpdate.Field()
@@ -368,14 +374,18 @@ class Mutations(graphene.ObjectType):
     draft_order_create = DraftOrderCreate.Field()
     draft_order_complete = DraftOrderComplete.Field()
     draft_order_delete = DraftOrderDelete.Field()
+    draft_order_line_create = DraftOrderLineCreate.Field()
+    draft_order_line_delete = DraftOrderLineDelete.Field()
+    draft_order_line_update = DraftOrderLineUpdate.Field()
     draft_order_update = DraftOrderUpdate.Field()
-    fulfillment_cancel = FulfillmentCancel.Field()
-    fulfillment_create = FulfillmentCreate.Field()
-    fulfillment_update = FulfillmentUpdate.Field()
+    order_fulfillment_cancel = FulfillmentCancel.Field()
+    order_fulfillment_create = FulfillmentCreate.Field()
+    order_fulfillment_update_tracking = FulfillmentUpdateTracking.Field()
     order_add_note = OrderAddNote.Field()
     order_cancel = OrderCancel.Field()
     order_capture = OrderCapture.Field()
     order_mark_as_paid = OrderMarkAsPaid.Field()
+    order_update_shipping = OrderUpdateShipping.Field()
     order_refund = OrderRefund.Field()
     order_release = OrderRelease.Field()
     order_update = OrderUpdate.Field()
@@ -388,9 +398,9 @@ class Mutations(graphene.ObjectType):
     payment_method_refund = PaymentMethodRefund.Field()
     payment_method_void = PaymentMethodVoid.Field()
 
-    product_attribute_create = ProductAttributeCreate.Field()
-    product_attribute_delete = ProductAttributeDelete.Field()
-    product_attribute_update = ProductAttributeUpdate.Field()
+    attribute_create = AttributeCreate.Field()
+    attribute_delete = AttributeDelete.Field()
+    attribute_update = AttributeUpdate.Field()
 
     product_create = ProductCreate.Field()
     product_delete = ProductDelete.Field()

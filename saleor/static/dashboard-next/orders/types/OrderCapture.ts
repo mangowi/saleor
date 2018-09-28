@@ -1,7 +1,7 @@
 /* tslint:disable */
 // This file was automatically generated and should not be edited.
 
-import { AddressCountry, OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
+import { OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: OrderCapture
@@ -13,13 +13,19 @@ export interface OrderCapture_orderCapture_errors {
   message: string | null;
 }
 
+export interface OrderCapture_orderCapture_order_billingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
+
 export interface OrderCapture_orderCapture_order_billingAddress {
   __typename: "Address";
   id: string;
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderCapture_orderCapture_order_billingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -104,6 +110,7 @@ export interface OrderCapture_orderCapture_order_lines_edges_node {
   quantity: number;
   quantityFulfilled: number;
   unitPrice: OrderCapture_orderCapture_order_lines_edges_node_unitPrice | null;
+  thumbnailUrl: string | null;
 }
 
 export interface OrderCapture_orderCapture_order_lines_edges {
@@ -116,13 +123,19 @@ export interface OrderCapture_orderCapture_order_lines {
   edges: OrderCapture_orderCapture_order_lines_edges[];
 }
 
+export interface OrderCapture_orderCapture_order_shippingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
+
 export interface OrderCapture_orderCapture_order_shippingAddress {
   __typename: "Address";
   id: string;
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderCapture_orderCapture_order_shippingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -195,6 +208,12 @@ export interface OrderCapture_orderCapture_order_user {
   email: string;
 }
 
+export interface OrderCapture_orderCapture_order_availableShippingMethods {
+  __typename: "ShippingMethod";
+  id: string;
+  name: string;
+}
+
 export interface OrderCapture_orderCapture_order {
   __typename: "Order";
   id: string;
@@ -215,6 +234,7 @@ export interface OrderCapture_orderCapture_order {
   totalAuthorized: OrderCapture_orderCapture_order_totalAuthorized | null;
   totalCaptured: OrderCapture_orderCapture_order_totalCaptured | null;
   user: OrderCapture_orderCapture_order_user | null;
+  availableShippingMethods: (OrderCapture_orderCapture_order_availableShippingMethods | null)[] | null;
 }
 
 export interface OrderCapture_orderCapture {

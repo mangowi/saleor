@@ -1,11 +1,17 @@
 /* tslint:disable */
 // This file was automatically generated and should not be edited.
 
-import { AddressCountry, OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
+import { OrderEventsEmails, OrderEvents, FulfillmentStatus, PaymentStatusEnum, OrderStatus } from "./../../types/globalTypes";
 
 // ====================================================
 // GraphQL mutation operation: OrderRelease
 // ====================================================
+
+export interface OrderRelease_orderRelease_order_billingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
 
 export interface OrderRelease_orderRelease_order_billingAddress {
   __typename: "Address";
@@ -13,7 +19,7 @@ export interface OrderRelease_orderRelease_order_billingAddress {
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderRelease_orderRelease_order_billingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -98,6 +104,7 @@ export interface OrderRelease_orderRelease_order_lines_edges_node {
   quantity: number;
   quantityFulfilled: number;
   unitPrice: OrderRelease_orderRelease_order_lines_edges_node_unitPrice | null;
+  thumbnailUrl: string | null;
 }
 
 export interface OrderRelease_orderRelease_order_lines_edges {
@@ -110,13 +117,19 @@ export interface OrderRelease_orderRelease_order_lines {
   edges: OrderRelease_orderRelease_order_lines_edges[];
 }
 
+export interface OrderRelease_orderRelease_order_shippingAddress_country {
+  __typename: "CountryDisplay";
+  code: string;
+  country: string;
+}
+
 export interface OrderRelease_orderRelease_order_shippingAddress {
   __typename: "Address";
   id: string;
   city: string;
   cityArea: string;
   companyName: string;
-  country: AddressCountry;
+  country: OrderRelease_orderRelease_order_shippingAddress_country;
   countryArea: string;
   firstName: string;
   lastName: string;
@@ -189,6 +202,12 @@ export interface OrderRelease_orderRelease_order_user {
   email: string;
 }
 
+export interface OrderRelease_orderRelease_order_availableShippingMethods {
+  __typename: "ShippingMethod";
+  id: string;
+  name: string;
+}
+
 export interface OrderRelease_orderRelease_order {
   __typename: "Order";
   id: string;
@@ -209,6 +228,7 @@ export interface OrderRelease_orderRelease_order {
   totalAuthorized: OrderRelease_orderRelease_order_totalAuthorized | null;
   totalCaptured: OrderRelease_orderRelease_order_totalCaptured | null;
   user: OrderRelease_orderRelease_order_user | null;
+  availableShippingMethods: (OrderRelease_orderRelease_order_availableShippingMethods | null)[] | null;
 }
 
 export interface OrderRelease_orderRelease {
