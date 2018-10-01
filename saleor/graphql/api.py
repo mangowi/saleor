@@ -39,7 +39,8 @@ from .page.resolvers import resolve_pages, resolve_page
 from .page.types import Page
 from .page.mutations import PageCreate, PageDelete, PageUpdate
 from .payment.types import PaymentGatewayEnum, PaymentMethod
-from .payment.resolvers import resolve_payment_methods, resolve_payment_client_token
+from .payment.resolvers import (
+    resolve_payment_methods, resolve_payment_client_token)
 from .payment.mutations import (
     CheckoutPaymentMethodCreate, PaymentMethodCharge, PaymentMethodRefund,
     PaymentMethodVoid)
