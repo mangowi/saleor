@@ -213,10 +213,8 @@ class OrderDraftPageComponent extends React.Component<
           </div>
           <div>
             <OrderCustomer
-              billingAddress={maybe(() => order.billingAddress)}
-              customer={maybe(() => order.user)}
               canEditCustomer={true}
-              shippingAddress={maybe(() => order.shippingAddress)}
+              order={order}
               onBillingAddressEdit={this.toggleBillingAddressEditDialog}
               onCustomerEditClick={this.toggleCustomerEditDialog}
               onShippingAddressEdit={this.toggleShippingAddressEditDialog}

@@ -252,5 +252,6 @@ export interface OrderDetailsFragment {
   totalAuthorized: OrderDetailsFragment_totalAuthorized | null;
   totalCaptured: OrderDetailsFragment_totalCaptured | null;
   user: OrderDetailsFragment_user | null;
+  userEmail: string | null;
   availableShippingMethods: (OrderDetailsFragment_availableShippingMethods | null)[] | null;
 }
