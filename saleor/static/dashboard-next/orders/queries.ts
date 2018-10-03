@@ -43,10 +43,31 @@ export const fragmentAddress = gql`
     streetAddress2
   }
 `;
+export const fragmentOrderLine = gql`
+  fragment OrderLineFragment on OrderLine {
+    id
+    productName
+    productSku
+    quantity
+    quantityFulfilled
+    unitPrice {
+      gross {
+        amount
+        currency
+      }
+      net {
+        amount
+        currency
+      }
+    }
+    thumbnailUrl
+  }
+`;
 
 export const fragmentOrderDetails = gql`
   ${fragmentAddress}
   ${fragmentOrderEvent}
+  ${fragmentOrderLine}
   fragment OrderDetailsFragment on Order {
     id
     billingAddress {
@@ -62,11 +83,10 @@ export const fragmentOrderDetails = gql`
         edges {
           node {
             id
-            orderLine {
-              id
-              productName
-            }
             quantity
+            orderLine {
+              ...OrderLineFragment
+            }
           }
         }
       }
@@ -76,22 +96,7 @@ export const fragmentOrderDetails = gql`
     lines {
       edges {
         node {
-          id
-          productName
-          productSku
-          quantity
-          quantityFulfilled
-          unitPrice {
-            gross {
-              amount
-              currency
-            }
-            net {
-              amount
-              currency
-            }
-          }
-          thumbnailUrl
+          ...OrderLineFragment
         }
       }
     }
