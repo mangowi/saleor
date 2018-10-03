@@ -5,7 +5,6 @@ import * as React from "react";
 import { transformAddressToForm } from "../..";
 import { UserError } from "../../..";
 import ActionDialog from "../../../components/ActionDialog";
-// import { CardSpacer } from "../../../components/CardSpacer";
 import { Container } from "../../../components/Container";
 import Form from "../../../components/Form";
 import PageHeader from "../../../components/PageHeader";
@@ -13,9 +12,9 @@ import { AddressTypeInput } from "../../../customers";
 import i18n from "../../../i18n";
 import { maybe } from "../../../misc";
 import { OrderDetails_order } from "../../types/OrderDetails";
+import { UserSearch_customers_edges_node } from "../../types/UserSearch";
 import OrderAddressEditDialog from "../OrderAddressEditDialog";
 import OrderCustomer from "../OrderCustomer";
-import OrderCustomerEditDialog from "../OrderCustomerEditDialog";
 import OrderDraftDetails from "../OrderDraftDetails/OrderDraftDetails";
 import { FormData as OrderDraftDetailsProductsFormData } from "../OrderDraftDetailsProducts";
 import OrderHistory, { FormData as HistoryFormData } from "../OrderHistory";
@@ -32,10 +31,8 @@ export interface OrderDraftPageProps {
     id: string;
     name: string;
   }>;
-  users: Array<{
-    id: string;
-    email: string;
-  }>;
+  users: UserSearch_customers_edges_node[];
+  usersLoading: boolean;
   countries: Array<{
     code: string;
     label: string;
@@ -49,7 +46,7 @@ export interface OrderDraftPageProps {
   variantsLoading: boolean;
   errors: UserError[];
   fetchVariants: (value: string) => void;
-  fetchUsers: (value: string) => void;
+  fetchUsers: (query: string) => void;
   onBack: () => void;
   onBillingAddressEdit: (data: AddressTypeInput) => void;
   onCustomerEdit: () => void;
@@ -68,7 +65,6 @@ export interface OrderDraftPageProps {
 }
 interface OrderDraftPageState {
   openedBillingAddressEditDialog: boolean;
-  openedCustomerEditDialog: boolean;
   openedDraftRemoveDialog: boolean;
   openedOrderLineAddDialog: boolean;
   openedShippingAddressEditDialog: boolean;
@@ -92,7 +88,6 @@ class OrderDraftPageComponent extends React.Component<
 > {
   state = {
     openedBillingAddressEditDialog: false,
-    openedCustomerEditDialog: false,
     openedDraftRemoveDialog: false,
     openedOrderLineAddDialog: false,
     openedShippingAddressEditDialog: false,
@@ -106,10 +101,6 @@ class OrderDraftPageComponent extends React.Component<
   toggleOrderLineAddDialog = () =>
     this.setState(prevState => ({
       openedOrderLineAddDialog: !prevState.openedOrderLineAddDialog
-    }));
-  toggleCustomerEditDialog = () =>
-    this.setState(prevState => ({
-      openedCustomerEditDialog: !prevState.openedCustomerEditDialog
     }));
   toggleShippingAddressEditDialog = () =>
     this.setState(prevState => ({
@@ -132,12 +123,14 @@ class OrderDraftPageComponent extends React.Component<
       order,
       shippingMethods,
       users,
+      usersLoading,
       variants,
       variantsLoading,
       fetchUsers,
       fetchVariants,
       onBack,
       onBillingAddressEdit,
+      onCustomerEdit,
       onDraftRemove,
       onNoteAdd,
       onOrderLineAdd,
@@ -147,7 +140,6 @@ class OrderDraftPageComponent extends React.Component<
     } = this.props;
     const {
       openedBillingAddressEditDialog,
-      openedCustomerEditDialog,
       openedDraftRemoveDialog,
       openedOrderLineAddDialog,
       openedShippingAddressEditDialog,
@@ -215,30 +207,15 @@ class OrderDraftPageComponent extends React.Component<
             <OrderCustomer
               canEditCustomer={true}
               order={order}
+              users={users}
+              loading={usersLoading}
+              fetchUsers={fetchUsers}
               onBillingAddressEdit={this.toggleBillingAddressEditDialog}
-              onCustomerEditClick={this.toggleCustomerEditDialog}
+              onCustomerEdit={onCustomerEdit}
               onShippingAddressEdit={this.toggleShippingAddressEditDialog}
             />
             {order && (
               <>
-                <Form
-                  initial={{
-                    email: order.user
-                      ? { label: order.user.email, value: order.user.id }
-                      : { label: "", value: "" }
-                  }}
-                >
-                  {({ change, data }) => (
-                    <OrderCustomerEditDialog
-                      open={openedCustomerEditDialog}
-                      user={data.email}
-                      users={users}
-                      fetchUsers={fetchUsers}
-                      onChange={change}
-                      onClose={this.toggleCustomerEditDialog}
-                    />
-                  )}
-                </Form>
                 <Form
                   initial={transformAddressToForm(
                     maybe(() => order.shippingAddress)
