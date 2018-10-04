@@ -5,9 +5,13 @@ import * as React from "react";
 import { transformAddressToForm } from "../..";
 import { UserError } from "../../..";
 import ActionDialog from "../../../components/ActionDialog";
+import { CardMenu } from "../../../components/CardMenu/CardMenu";
 import { Container } from "../../../components/Container";
+import DateFormatter from "../../../components/DateFormatter";
 import Form from "../../../components/Form";
 import PageHeader from "../../../components/PageHeader";
+import SaveButtonBar from "../../../components/SaveButtonBar";
+import Skeleton from "../../../components/Skeleton";
 import { AddressTypeInput } from "../../../customers";
 import i18n from "../../../i18n";
 import { maybe } from "../../../misc";
@@ -67,15 +71,22 @@ export interface OrderDraftPageProps {
 interface OrderDraftPageState {
   openedBillingAddressEditDialog: boolean;
   openedDraftRemoveDialog: boolean;
+  openedDraftFinalizeDialog: boolean;
   openedOrderLineAddDialog: boolean;
   openedShippingAddressEditDialog: boolean;
   openedShippingMethodEditDialog: boolean;
 }
 
 const decorate = withStyles(theme => ({
-  orderDate: {
-    marginBottom: theme.spacing.unit * 2,
-    marginLeft: theme.spacing.unit * 10
+  date: {
+    marginBottom: theme.spacing.unit * 3,
+    marginLeft: theme.spacing.unit * 7
+  },
+  header: {
+    marginBottom: 0
+  },
+  menu: {
+    marginRight: -theme.spacing.unit
   },
   root: {
     display: "grid",
@@ -84,11 +95,12 @@ const decorate = withStyles(theme => ({
   }
 }));
 class OrderDraftPageComponent extends React.Component<
-  OrderDraftPageProps & WithStyles<"orderDate" | "root">,
+  OrderDraftPageProps & WithStyles<"date" | "header" | "menu" | "root">,
   OrderDraftPageState
 > {
   state = {
     openedBillingAddressEditDialog: false,
+    openedDraftFinalizeDialog: false,
     openedDraftRemoveDialog: false,
     openedOrderLineAddDialog: false,
     openedShippingAddressEditDialog: false,
@@ -98,6 +110,10 @@ class OrderDraftPageComponent extends React.Component<
   toggleDraftRemoveDialog = () =>
     this.setState(prevState => ({
       openedDraftRemoveDialog: !prevState.openedDraftRemoveDialog
+    }));
+  toggleDraftFinalizeDialog = () =>
+    this.setState(prevState => ({
+      openedDraftFinalizeDialog: !prevState.openedDraftFinalizeDialog
     }));
   toggleOrderLineAddDialog = () =>
     this.setState(prevState => ({
@@ -133,6 +149,7 @@ class OrderDraftPageComponent extends React.Component<
       onBillingAddressEdit,
       onCustomerEdit,
       onDraftRemove,
+      onDraftFinalize,
       onNoteAdd,
       onOrderLineAdd,
       onOrderLineChange,
@@ -141,6 +158,7 @@ class OrderDraftPageComponent extends React.Component<
     } = this.props;
     const {
       openedBillingAddressEditDialog,
+      openedDraftFinalizeDialog,
       openedDraftRemoveDialog,
       openedOrderLineAddDialog,
       openedShippingAddressEditDialog,
@@ -149,13 +167,30 @@ class OrderDraftPageComponent extends React.Component<
     return (
       <Container width="md">
         <PageHeader
-          title={
-            order
-              ? i18n.t("Order #{{ orderId }}", { orderId: order.number })
-              : undefined
-          }
+          className={classes.header}
+          title={maybe(() => order.number) ? "#" + order.number : undefined}
           onBack={onBack}
-        />
+        >
+          <CardMenu
+            className={classes.menu}
+            menuItems={[
+              {
+                label: i18n.t("Cancel order", { context: "button" }),
+                onSelect: this.toggleDraftRemoveDialog
+              }
+            ]}
+          />
+        </PageHeader>
+        <div className={classes.date}>
+          {order && order.created ? (
+            <DateFormatter
+              date={order.created}
+              typographyProps={{ variant: "caption" }}
+            />
+          ) : (
+            <Skeleton style={{ width: "10em" }} />
+          )}
+        </div>
         <div className={classes.root}>
           <div>
             <OrderDraftDetails
@@ -186,11 +221,32 @@ class OrderDraftPageComponent extends React.Component<
               title={i18n.t("Remove draft order", {
                 context: "modal title"
               })}
+              variant="delete"
             >
               <DialogContentText
                 dangerouslySetInnerHTML={{
                   __html: i18n.t(
                     "Are you sure you want to remove draft <strong>#{{ number }}</strong>",
+                    {
+                      context: "modal",
+                      number: maybe(() => order.number)
+                    }
+                  )
+                }}
+              />
+            </ActionDialog>
+            <ActionDialog
+              onClose={this.toggleDraftFinalizeDialog}
+              onConfirm={onDraftFinalize}
+              open={openedDraftFinalizeDialog}
+              title={i18n.t("Finalize draft order", {
+                context: "modal title"
+              })}
+            >
+              <DialogContentText
+                dangerouslySetInnerHTML={{
+                  __html: i18n.t(
+                    "Are you sure you want to finalize draft <strong>#{{ number }}</strong>",
                     {
                       context: "modal",
                       number: maybe(() => order.number)
@@ -206,6 +262,7 @@ class OrderDraftPageComponent extends React.Component<
           </div>
           <div>
             <OrderCustomer
+              canEditAddresses={true}
               canEditCustomer={true}
               order={order}
               users={users}
@@ -259,6 +316,11 @@ class OrderDraftPageComponent extends React.Component<
             )}
           </div>
         </div>
+        <SaveButtonBar
+          onCancel={onBack}
+          onSave={this.toggleDraftFinalizeDialog}
+          labels={{ save: i18n.t("Finalize", { context: "button" }) }}
+        />
       </Container>
     );
   }
