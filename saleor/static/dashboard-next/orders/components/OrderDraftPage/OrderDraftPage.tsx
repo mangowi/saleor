@@ -11,6 +11,7 @@ import PageHeader from "../../../components/PageHeader";
 import { AddressTypeInput } from "../../../customers";
 import i18n from "../../../i18n";
 import { maybe } from "../../../misc";
+import { DraftOrderInput } from "../../../types/globalTypes";
 import { OrderDetails_order } from "../../types/OrderDetails";
 import { UserSearch_customers_edges_node } from "../../types/UserSearch";
 import OrderAddressEditDialog from "../OrderAddressEditDialog";
@@ -49,7 +50,7 @@ export interface OrderDraftPageProps {
   fetchUsers: (query: string) => void;
   onBack: () => void;
   onBillingAddressEdit: (data: AddressTypeInput) => void;
-  onCustomerEdit: () => void;
+  onCustomerEdit: (data: DraftOrderInput) => void;
   onDraftFinalize: () => void;
   onDraftRemove: () => void;
   onNoteAdd: (data: HistoryFormData) => void;
